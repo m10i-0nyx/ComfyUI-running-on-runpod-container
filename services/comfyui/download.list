@@ -1,0 +1,8 @@
+#https://example.com/model/dummy.safetensors
+#  out=checkpoints/dummy.safetensors
+
+https://huggingface.co/ChenkinNoob/ChenkinNoob-XL-V0.1/resolve/main/ChenkinNoob-XL-V0.1.safetensors?download=true
+    out=checkpoints/ChenkinNoob-XL-V0.1.safetensors
+
+https://chimpo.info/uploaded/oneObsession_v18.safetensors
+    out=checkpoints/oneObsession_v18.safetensors

@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1
+# syntax=container/dockerfile:1
 FROM docker.io/nvidia/cuda:12.8.1-runtime-ubuntu24.04
-ARG COMFYUI_TAG=v0.3.75
-ARG PYTHON_VERSION=3.12
+ARG COMFYUI_TAG=v0.3.77
 ENV COMFYUI_DIR=/comfyui
+ENV UV_PYTHON_INSTALL_DIR=/opt/python
 ENV VENV_PATH=/opt/venv
 ENV WORKSPACE="/workspace"
 ENV PYTHONPATH="${PYTHONPATH}:${PWD}"
@@ -11,11 +11,12 @@ ENV PATH="/root/.local/bin:${VENV_PATH}/bin:${PATH}"
 RUN set -eux \
     && apt-get update \
     && apt-get full-upgrade -y --no-install-recommends \
-    && apt-get install -y --no-install-recommends curl git python3.12 python3.12-venv \
+    && apt-get install -y --no-install-recommends curl git aria2 ca-certificates parallel \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && uv venv -p ${PYTHON_VERSION} ${VENV_PATH}
+    && uv venv -p 3.13 ${VENV_PATH} \
+    && . ${VENV_PATH}/bin/activate
 
 RUN set -eux \
     # ComfyUI をクローン,　依存関係をインストール
@@ -46,15 +47,41 @@ RUN set -eux \
     && cd comfyui-crystools \
     && uv pip install -r requirements.txt
 
+#RUN set -eux \
+#    # comfyui_controlnet_aux ノードをインストール
+#    # Python 3.13非対応のためコメントアウト
+#    && cd ${COMFYUI_DIR}/custom_nodes \
+#    && git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git comfyui_controlnet_aux \
+#    && cd comfyui_controlnet_aux \
+#    && uv pip install -r requirements.txt
+
+RUN set -eux \
+    # ComfyUI-Custom-Scripts ノードをインストール
+    && cd ${COMFYUI_DIR}/custom_nodes \
+    && git clone https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git ComfyUI-Custom-Scripts
+
+RUN set -eux \
+    # ComfyUI-Autocomplete-Plus ノードをインストール
+    && cd ${COMFYUI_DIR}/custom_nodes \
+    && git clone https://github.com/newtextdoc1111/ComfyUI-Autocomplete-Plus.git ComfyUI-Autocomplete-Plus
+
+RUN set -eux \
+    # ComfyUI-ppm ノードをインストール
+    && cd ${COMFYUI_DIR}/custom_nodes \
+    && git clone https://github.com/pamparamm/ComfyUI-ppm.git ComfyUI-ppm
+
 WORKDIR ${COMFYUI_DIR}
 
-COPY . /docker/
+COPY . /container/
 RUN set -eux \
-    && chmod u+x /docker/entrypoint.sh \
-    && cp /docker/extra_model_paths.yaml ${COMFYUI_DIR} \
+    && chmod u+x /container/entrypoint.sh \
+    && cp /container/extra_model_paths.yaml ${COMFYUI_DIR} \
     && mkdir -p ${COMFYUI_DIR}/custom_nodes/ \
-    && mv /docker/output_httpserver.py ${COMFYUI_DIR}/custom_nodes/ \
-    && chmod a+x ${COMFYUI_DIR}/custom_nodes/*.py
+    && mv /container/output_httpserver.py ${COMFYUI_DIR}/custom_nodes/ \
+    && chmod a+x ${COMFYUI_DIR}/custom_nodes/*.py \
+    && . ${VENV_PATH}/bin/activate \
+    && uv pip uninstall pynvml \
+    && uv pip install -U nvidia-ml-py
 
 # NVIDIAランタイムの設定
 ENV NVIDIA_VISIBLE_DEVICES=all
@@ -64,5 +91,5 @@ ENV NVIDIA_DISABLE_REQUIRE=1
 ENV CLI_ARGS="--dont-print-server --force-fp16"
 
 EXPOSE 8188 8888
-ENTRYPOINT ["/docker/entrypoint.sh"]
+ENTRYPOINT ["/container/entrypoint.sh"]
 CMD python3 -u main.py --listen --port 8188 ${CLI_ARGS}
