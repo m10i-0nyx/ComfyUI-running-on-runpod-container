@@ -21,7 +21,18 @@ for to_path in "${!MOUNTS[@]}"; do
     echo Mounted "$(basename "${from_path}")"
 done
 
-# --- 2. safetensors の自動ダウンロード機能 ---
+# --- 2. Python venv activate & exec ---
+. ${VENV_PATH}/bin/activate
+
+# --- 3. Print system info ---
+echo "===== ComfyUI Entrypoint Info ====="
+echo "Workspace: ${WORKSPACE}"
+echo "Venv: ${VENV_PATH}"
+echo "Python: $(which python) ($(python --version))"
+echo "----- torch info -----"
+python -c "import torch; print('torch=', torch.__version__); print('torch_cuda=', torch.version.cuda); print('avail=', torch.cuda.is_available())"
+
+# --- 4. safetensors の自動ダウンロード機能 ---
 DOWNLOAD_LIST="/container/download.list"
 DOWNLOAD_DIR="${WORKSPACE}/data/models"
 
@@ -54,13 +65,12 @@ else
     echo "No ${CHECKSUM_LIST} found. Skipping checksum verification."
 fi
 
-# --- 3. startup.sh があれば実行 ---
+# --- 5. startup.sh があれば実行 ---
 if [ -f "${WORKSPACE}/data/config/startup.sh" ]; then
     pushd ${WORKSPACE}
     . ${WORKSPACE}/data/config/startup.sh
     popd
 fi
 
-# --- 4. Python venv activate & exec ---
-. ${VENV_PATH}/bin/activate
+# --- 6. コマンド実行 ---
 exec "$@"
