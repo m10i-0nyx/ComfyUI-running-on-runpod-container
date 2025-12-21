@@ -1,5 +1,5 @@
 #https://example.com/model/dummy.safetensors
 #  out=checkpoints/dummy.safetensors
 
-https://chimpo.info/uploaded/oneObsession_v19.safetensors
+https://aws-m10i-safetensors.s3.ap-northeast-1.amazonaws.com/checkpoints/oneObsession_v19.safetensors
     out=checkpoints/oneObsession_v19.safetensors
